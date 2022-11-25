@@ -24,6 +24,7 @@ public class Node {
         try {
             input = new File(ipDirectory+"input_"+ID+".txt");
             output = new File(opDirectory+"output_"+ID+".txt");
+            
             if (!input.exists()) input.createNewFile();
             if (!output.exists()) output.createNewFile();
         } catch (FileNotFoundException e) {
@@ -33,9 +34,10 @@ public class Node {
         }
     }
 
-    private void sendHello(BufferedWriter writer) {
+    private void sendHello(BufferedWriter writer, int time) {
         try {
-            String msg = "hello "+ID;
+            String msg = "hello "+ID+" at time-"+time;
+            
             writer.write(msg);
             writer.write(System.lineSeparator());
         } catch (IOException e) {
@@ -47,13 +49,19 @@ public class Node {
         Object execution = new Object();
         try {
             synchronized(execution) {
-                BufferedWriter writer = new BufferedWriter(new FileWriter(output));
+                
                 for (int time = 0; time < duration; time++) {
-                    if (time%5 == 0) sendHello(writer);
+                    
+                    BufferedWriter writer = new BufferedWriter(new FileWriter(output, true));
+                    
+                    if (time%5 == 0) sendHello(writer, time);
+                    
+                    writer.close();
+                    
                     System.out.println("Node"+ID+" executing for-"+time);
                     execution.wait(1000);
                 }
-                writer.close();
+
             }
         } catch(InterruptedException e) {
             e.printStackTrace();

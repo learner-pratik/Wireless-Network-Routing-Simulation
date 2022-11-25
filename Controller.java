@@ -14,41 +14,12 @@ public class Controller {
     private int duration;
     private File topologyFile;
     private HashMap<Integer, ArrayList<Integer>> topology;
-    private Channel[] channels; 
 
     Controller(int duration) {
         this.duration = duration;
+        
         topologyFile = new File("topology.txt");
         topology = new HashMap<Integer, ArrayList<Integer>>(10);
-        channels = new Channel[10];
-    }
-
-    private void startController() {
-        // read the topology file and create the topology graph
-        buildTopology();
-
-        Object execution = new Object();
-        try {
-            synchronized(execution) {
-                for (int time = 0; time < duration; time++) {
-                    
-                    for (int id = 0; id < 10; id++) {
-                        String inputFile = ipDirectory+"input_"+id+".txt";
-                        if (new File(inputFile).exists()) {
-                            if (channels[id] == null) {
-                                channels[id] = new Channel(id);
-                                channels[id].process();
-                            } else channels[id].process();
-                        }
-                    }
-
-                    System.out.println("Controller executing-"+time);
-                    execution.wait(1000);
-                }
-            }
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
     }
 
     private void buildTopology() {
@@ -58,12 +29,14 @@ public class Controller {
             String line = tReader.readLine();
             while (line != null) {
                 String[] lineSplit = line.split(" ");
+                
                 int src = Integer.parseInt(lineSplit[0]);
                 int dest = Integer.parseInt(lineSplit[1]);
 
                 if (!topology.containsKey(src)) {
                     topology.put(src, new ArrayList<Integer>());
                 }
+                
                 ArrayList<Integer> l = topology.get(src);
                 l.add(dest);
                 topology.put(src, l);
@@ -82,42 +55,75 @@ public class Controller {
         }
     }
 
-    private class Channel {
+    class NodeFile {
+        File file;
+        int fileNo;
+        long lastLine;
 
-        String output;
-        int id, lastLine;
-
-        Channel(int id) {
-            this.id = id;
-            output = opDirectory+"output_"+id+".txt";
+        NodeFile(int fileNo, File file) {
+            this.fileNo = fileNo;
+            this.file = file;
             lastLine = 0;
         }
 
-        void process() {
-            try {
-                int start = 0;
-                BufferedReader reader = new BufferedReader(new FileReader(output));
-                String line = reader.readLine();
-                while (line != null) {
-                    if (start >= lastLine) {
+        void readAndProcess() {
+            try {    
+                if (lastLine < file.length()) {
+                    BufferedReader reader = new BufferedReader(new FileReader(file));
+                    reader.skip(lastLine);
+                    
+                    String line = null;
+                    while ((line = reader.readLine()) != null) {
+                        
+                        for (Integer node : topology.get(fileNo)) {
+                            String ipPath = ipDirectory+"input_"+node+".txt";
+                            File input = new File(ipPath);
 
-                        for (Integer neighbor : topology.get(id)) {
-                            File nFile = new File(ipDirectory+"input_"+neighbor+".txt");
-                            BufferedWriter writer = new BufferedWriter(new FileWriter(nFile));
-                            writer.write(line);
-                            writer.write(System.lineSeparator());
-                            writer.close();
+                            if (input.exists()) {
+                                BufferedWriter writer = new BufferedWriter(new FileWriter(input, true));
+                                
+                                writer.write(line);
+                                writer.write(System.lineSeparator());
+                                System.out.println("Controller written data");
+                                
+                                writer.close();
+                            }
                         }
-                        // System.out.println("Line read from output-"+line);
-
                     }
-                    start++;
-                    line = reader.readLine();
+                    
+                    lastLine = file.length();
+                    reader.close();
                 }
-                lastLine = start;
-                reader.close();
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
             } catch (IOException e) {
                 e.printStackTrace();
+            }
+        }
+    }
+
+    private void startController() {
+        // read the topology file and create the topology graph
+        buildTopology();
+
+        NodeFile[] nodeFiles = new NodeFile[10];
+        for (int f = 0; f < 10; f++) nodeFiles[f] = null;
+
+        long currTime = System.currentTimeMillis();
+        while (System.currentTimeMillis() < currTime+(1000*duration)) {
+
+            for (int id = 0; id < 10; id++) {
+                
+                String outputPath = opDirectory+"output_"+id+".txt";
+                if (new File(outputPath).exists()) {
+                    
+                    if (nodeFiles[id] == null) {
+                        File opFile = new File(outputPath);
+                        nodeFiles[id] = new NodeFile(id, opFile);
+                    }
+
+                    if (nodeFiles[id] != null) nodeFiles[id].readAndProcess();
+                }
             }
         }
     }
