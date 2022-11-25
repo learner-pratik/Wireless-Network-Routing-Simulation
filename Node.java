@@ -1,16 +1,15 @@
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 
 public class Node {
 
+    private static final String ipDirectory = "inputs/", opDirectory = "outputs/";
     private int ID, duration, destID;
     private String message;
-
-    FileReader fReader;
-    FileWriter fWriter;
+    File input, output;
 
     Node(int ID, int duration, int destID, String message) {
         this.ID = ID;
@@ -23,13 +22,10 @@ public class Node {
 
     private void setupFiles() {
         try {
-            File input = new File("input_"+ID+".txt");
-            File output = new File("output_"+ID+".txt");
-            input.createNewFile();
-            output.createNewFile();
-
-            fReader = new FileReader(input);
-            fWriter = new FileWriter(output, true);
+            input = new File(ipDirectory+"input_"+ID+".txt");
+            output = new File(opDirectory+"output_"+ID+".txt");
+            if (!input.exists()) input.createNewFile();
+            if (!output.exists()) output.createNewFile();
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -37,24 +33,32 @@ public class Node {
         }
     }
 
+    private void sendHello(BufferedWriter writer) {
+        try {
+            String msg = "hello "+ID;
+            writer.write(msg);
+            writer.write(System.lineSeparator());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     private void startNode() {
-        for (int t = 0; t < duration; t++) {
-            if (t%10 == 0) {
-                try {
-                    String msg = "data"+t;
-                    fWriter.append(msg);
-                    fWriter.append(System.lineSeparator());
-                    System.out.println("Node"+ID+"written message-"+msg);
-                } catch (IOException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
+        Object execution = new Object();
+        try {
+            synchronized(execution) {
+                BufferedWriter writer = new BufferedWriter(new FileWriter(output));
+                for (int time = 0; time < duration; time++) {
+                    if (time%5 == 0) sendHello(writer);
+                    System.out.println("Node"+ID+" executing for-"+time);
+                    execution.wait(1000);
                 }
+                writer.close();
             }
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+        } catch(InterruptedException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 

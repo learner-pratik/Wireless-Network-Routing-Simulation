@@ -1,4 +1,5 @@
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -6,11 +7,10 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Timer;
-import java.util.TimerTask;
 
 public class Controller {
 
+    private static final String ipDirectory = "inputs/", opDirectory = "outputs/";
     private int duration;
     private File topologyFile;
     private HashMap<Integer, ArrayList<Integer>> topology;
@@ -18,7 +18,7 @@ public class Controller {
 
     Controller(int duration) {
         this.duration = duration;
-        // topologyFile = new File("topology.txt");
+        topologyFile = new File("topology.txt");
         topology = new HashMap<Integer, ArrayList<Integer>>(10);
         channels = new Channel[10];
     }
@@ -27,26 +27,28 @@ public class Controller {
         // read the topology file and create the topology graph
         buildTopology();
 
-        Timer timer = new Timer();
-        timer.schedule(new TimerTask() {
-
-            @Override
-            public void run() {
-                // read and write files
-                for (int id = 0; id < 10; id++) {
-                    File input = new File("input_"+id);
-                    if (input.exists()) {
-                        if (channels[id] == null) {
-                            channels[id] = new Channel(id);
-                        } else {
-                            channels[id].process();
+        Object execution = new Object();
+        try {
+            synchronized(execution) {
+                for (int time = 0; time < duration; time++) {
+                    
+                    for (int id = 0; id < 10; id++) {
+                        String inputFile = ipDirectory+"input_"+id+".txt";
+                        if (new File(inputFile).exists()) {
+                            if (channels[id] == null) {
+                                channels[id] = new Channel(id);
+                                channels[id].process();
+                            } else channels[id].process();
                         }
                     }
+
+                    System.out.println("Controller executing-"+time);
+                    execution.wait(1000);
                 }
-                System.out.println("printing");
             }
-            
-        }, duration*1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     private void buildTopology() {
@@ -82,39 +84,38 @@ public class Controller {
 
     private class Channel {
 
-        BufferedReader frInput;
-        FileWriter fwOutput;
-        int lastInput;
+        String output;
+        int id, lastLine;
 
         Channel(int id) {
-            String input = "input_"+id;
-            String output = "output_"+id;
-            lastInput = 0;
-
-            try {
-                frInput = new BufferedReader(new FileReader(input));
-                fwOutput = new FileWriter(output);
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            this.id = id;
+            output = opDirectory+"output_"+id+".txt";
+            lastLine = 0;
         }
 
         void process() {
-            int start = 0;
-            String line;
             try {
-                line = frInput.readLine();
+                int start = 0;
+                BufferedReader reader = new BufferedReader(new FileReader(output));
+                String line = reader.readLine();
                 while (line != null) {
-                    if (start > lastInput) {
-                        fwOutput.append(line);
-                        fwOutput.append(System.lineSeparator());
+                    if (start >= lastLine) {
+
+                        for (Integer neighbor : topology.get(id)) {
+                            File nFile = new File(ipDirectory+"input_"+neighbor+".txt");
+                            BufferedWriter writer = new BufferedWriter(new FileWriter(nFile));
+                            writer.write(line);
+                            writer.write(System.lineSeparator());
+                            writer.close();
+                        }
+                        // System.out.println("Line read from output-"+line);
+
                     }
                     start++;
-                    line = frInput.readLine();
+                    line = reader.readLine();
                 }
-                lastInput = start;
+                lastLine = start;
+                reader.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
