@@ -26,8 +26,8 @@ public class Controller {
         try {
             BufferedReader tReader = new BufferedReader(new FileReader(topologyFile));
             
-            String line = tReader.readLine();
-            while (line != null) {
+            String line = null;
+            while ((line = tReader.readLine()) != null) {
                 String[] lineSplit = line.split(" ");
                 
                 int src = Integer.parseInt(lineSplit[0]);
@@ -40,8 +40,6 @@ public class Controller {
                 ArrayList<Integer> l = topology.get(src);
                 l.add(dest);
                 topology.put(src, l);
-
-                line = tReader.readLine();
             }
 
             tReader.close();

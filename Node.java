@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Arrays;
 
 public class Node {
 
@@ -12,6 +13,7 @@ public class Node {
     private int ID, duration, destID;
     private String message;
     File input, output;
+    private int[] neighbors;
 
     Node(int ID, int duration, int destID, String message) {
         this.ID = ID;
@@ -19,7 +21,14 @@ public class Node {
         this.destID = destID;
         this.message = message;
 
+        neighbors = new int[10];
+        for (int i = 0; i < 10; i++) neighbors[i] = -1;
+
         setupFiles();
+    }
+
+    private String getName() {
+        return "Node-"+ID+": ";
     }
 
     private void setupFiles() {
@@ -69,6 +78,28 @@ public class Node {
         }
     }
 
+    private void processHello(String msg) {
+        String neighID = msg.split(" ")[1];
+        neighbors[Integer.parseInt(neighID)] = 0;
+        System.out.println(getName() + Arrays.toString(neighbors));
+    }
+
+    private void computeInTree(String msg) {
+        return;
+    }
+
+    private void processNeighbors() {
+        // increment counter of all neighbors
+        for (int i = 0; i < 10; i++) {
+            if (neighbors[i] != -1) neighbors[i]++;
+            if (neighbors[i] >= 30) neighbors[i] = -1;
+        }
+    }
+
+    private void processData(String msg) {
+        return;
+    }
+
     private long readInput(long lastLine) {
         try {
             if (lastLine < input.length()) {
@@ -76,8 +107,20 @@ public class Node {
                 reader.skip(lastLine);
 
                 String line = null;
-                while ((line = reader.readLine()) != null)
-                    System.out.println("Node"+ID+": Reading from Input: "+line);
+                while ((line = reader.readLine()) != null) {
+                    String type = line.split(" ")[0];
+                    switch(type) {
+                        case "hello":
+                            processHello(line);
+                            break;
+                        case "intree":
+                            computeInTree(line);
+                            break;
+                        case "data":
+                            processData(line);
+                            break;
+                    }
+                }
                 
                 reader.close();
             }
@@ -99,23 +142,7 @@ public class Node {
                 
         //         long lastLine = 0;
         //         while (!exit) {
-        //             try {
-        //                 if (lastLine < input.length()) {
-        //                     BufferedReader reader = new BufferedReader(new FileReader(input));
-        //                     reader.skip(lastLine);
-
-        //                     String line = null;
-        //                     while ((line = reader.readLine()) != null)
-        //                         System.out.println("Node"+ID+": Reading from Input: "+line);
-                            
-        //                     lastLine = input.length();
-        //                     reader.close();
-        //                 }
-        //             } catch (FileNotFoundException e) {
-        //                 e.printStackTrace();
-        //             } catch (IOException e) {
-        //                 e.printStackTrace();
-        //             }
+        //             lastLine = readInput(lastLine);
         //         }
         //     }
         // };
@@ -135,6 +162,8 @@ public class Node {
                     if (time%15 == 0) if (destID != -1) sendData(writer, time);
                     
                     lastLine = readInput(lastLine);
+
+                    processNeighbors();
                     
                     writer.close();
                     
