@@ -45,10 +45,8 @@ public class Controller {
             }
 
             tReader.close();
-            System.out.println(topology.toString());
 
         } catch (FileNotFoundException e) {
-            System.out.println("File not found");
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
@@ -84,7 +82,6 @@ public class Controller {
                                 
                                 writer.write(line);
                                 writer.write(System.lineSeparator());
-                                System.out.println("Controller written data");
                                 
                                 writer.close();
                             }
