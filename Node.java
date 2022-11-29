@@ -12,12 +12,12 @@ import java.util.Map;
 
 public class Node {
 
-    private static final String ipDirectory = "inputs/", opDirectory = "outputs/";
+    private static final String ipDirectory = "inputs/", opDirectory = "outputs/", logDirectory = "logs/";
     
-    private int ID, duration, destID;
+    private int ID, duration, destID, logCounter;
     private String message;
     
-    File input, output;
+    File input, output, log;
     private int[] neighbors;
 
     private HashMap<Integer, Integer> inTree;
@@ -28,6 +28,7 @@ public class Node {
         this.duration = duration;
         this.destID = destID;
         this.message = message;
+        logCounter = 0;
 
         neighbors = new int[10];
         for (int i = 0; i < 10; i++) neighbors[i] = -1;
@@ -38,17 +39,19 @@ public class Node {
         setupFiles();
     }
 
-    private String getName() {
-        return "Node-"+ID+": ";
-    }
+    // private String getName() {
+    //     return "Node-"+ID+": ";
+    // }
 
     private void setupFiles() {
         try {
             input = new File(ipDirectory+"input_"+ID+".txt");
             output = new File(opDirectory+"output_"+ID+".txt");
+            log = new File(logDirectory+"log_"+ID+".txt");
             
             if (!input.exists()) input.createNewFile();
             if (!output.exists()) output.createNewFile();
+            if (!log.exists()) log.createNewFile();
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -142,19 +145,35 @@ public class Node {
         }
     }
 
+    private void writeToLog(String data) {
+        try {
+            BufferedWriter logWriter = new BufferedWriter(new FileWriter(log, true));
+            logWriter.write(data);
+            logWriter.write(System.lineSeparator());
+            logWriter.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
     private void computeInTree(String msg) {
         // build neighbor intree
         // msg format -> intree 4 (1-4) (3-4) (5-3) (2-1)
         HashMap<Integer, Integer> neighborInTree = new HashMap<>();
         HashMap<Integer, ArrayList<Integer>> revNeighborInTree = new HashMap<>();
 
+        writeToLog((logCounter++)+". Msg received: "+msg);
         String msg1 = msg.replace("(", "").replace(")", "").replace("intree ", "");
 
         // if neighbor intree is the node itself, then add the edge
         if (msg1.length() == 1) {
+            writeToLog((logCounter++)+"."+" if for no intree called");
             int neigh = Integer.parseInt(msg1);
             inTree.put(neigh, ID);
+            revInTree = new HashMap<>();
             buildRevInTree(revInTree, inTree);
+            writeToLog((logCounter++)+". Intree for this->"+inTree.toString());
             return;
         }
         
@@ -163,20 +182,29 @@ public class Node {
         String[] data = msg1.substring(2).split(" ");
 
         buildInTree(neighborInTree, data);
+        writeToLog((logCounter++)+". Neighbor intree before modification->"+neighborInTree.toString());
 
         // modify neighbor in-tree
         if (neighborInTree.containsKey(ID)) neighborInTree.remove(ID);
         neighborInTree.put(neighbor, ID);
 
+        writeToLog((logCounter++)+". Neighbor intree after modification->"+neighborInTree.toString());
+
         // build reverse intree by reversing the edges
         buildRevInTree(revNeighborInTree, neighborInTree);
+        writeToLog((logCounter++)+". Reversed neighbor intree->"+revNeighborInTree.toString());
 
         int hopCnt = 1;
 
         HashMap<Integer, Integer> newInTree = new HashMap<>();
 
+        writeToLog((logCounter++)+". Current Intree->"+inTree.toString());
+        writeToLog((logCounter++)+". Current reversed intree->"+revInTree.toString());
+
         // process all neighbors
+        writeToLog((logCounter++)+". Start while");
         while (true) {
+            writeToLog((logCounter++)+". For hop count: "+hopCnt);
             ArrayList<Integer> l1 = new ArrayList<>();
             ArrayList<Integer> l2 = new ArrayList<>();
 
@@ -184,92 +212,129 @@ public class Node {
             computeHops(l1, revInTree, ID, 0, hopCnt);
             computeHops(l2, revNeighborInTree, ID, 0, hopCnt);
 
+            writeToLog((logCounter++)+". Lists: l1->"+l1.toString()+", l2->"+l2.toString());
+
             if (l1.isEmpty() && l2.isEmpty()) break;
 
             Collections.sort(l1);
             Collections.sort(l2);
+
+            writeToLog((logCounter++)+". Lists sorted: l1->"+l1.toString()+", l2->"+l2.toString());
 
             int c1 = 0, c2 = 0;
             
             while (c1 < l1.size() && c2 < l2.size()) {
 
                 int v1 = l1.get(c1), v2 = l2.get(c2);
+                writeToLog((logCounter++)+". Values: v1="+v1+", v2="+v2);
 
                 if (v1 < v2) {
                     // remove edge from neighbor tree and add in final tree
+                    writeToLog((logCounter++)+". First if");
                     neighborInTree.remove(v1);
                     if (l2.contains(v1)) l2.remove(Integer.valueOf(v1));
+                    writeToLog((logCounter++)+". Modified neighbor tree->"+neighborInTree.toString());
+                    writeToLog((logCounter++)+". Modified l2->"+l2.toString());
                     
                     newInTree.put(v1, inTree.get(v1));
+                    writeToLog((logCounter++)+". Current new intree->"+newInTree.toString());
                     
                     c1++;
 
                 } else if (v1 > v2) {
                     // remove edge from intree and add in final tree
+                    writeToLog((logCounter++)+". Second if");
                     inTree.remove(v2);
                     if (l1.contains(v2)) l1.remove(Integer.valueOf(v2));
+                    writeToLog((logCounter++)+". Modified in tree->"+inTree.toString());
+                    writeToLog((logCounter++)+". Modified l1->"+l2.toString());
                     
                     newInTree.put(v2, neighborInTree.get(v2));
+                    writeToLog((logCounter++)+". Current new intree->"+newInTree.toString());
                     
                     c2++;
 
                 } else {
                     int temp1 = v1, temp2 = v2;
-
+                    writeToLog((logCounter++)+". Else");
+                    writeToLog((logCounter++)+". Temp values at start: temp1-"+temp1+", temp2-"+temp2);
                     // if both node values same, break tie by checking parents
                     while (temp1 == temp2) {
                         if (inTree.containsKey(temp1)) temp1 = inTree.get(temp1);
                         if (neighborInTree.containsKey(temp2)) temp2 = neighborInTree.get(temp2);
+                        writeToLog((logCounter++)+". Temp values: temp1-"+temp1+", temp2-"+temp2);
 
                         // if reached root, just add the edge from intree
                         if (temp1 == ID && temp2 == ID) {
+                            writeToLog((logCounter++)+". Reached root");
                             newInTree.put(v1, inTree.get(v1));
-                            inTree.remove(v1);
+                            writeToLog((logCounter++)+". Modified in tree->"+inTree.toString());
+                            writeToLog((logCounter++)+". Current new intree->"+newInTree.toString());
+                            c1++; c2++;
                             break;
                         }
                     }
 
                     if (temp1 < temp2) {
                         // remove edge from neighbor tree and add in final tree
+                        writeToLog((logCounter++)+". temp1<temp2");
                         if (neighborInTree.containsKey(v1)) neighborInTree.remove(v1);
                         if (l2.contains(v1)) l2.remove(Integer.valueOf(v1));
+                        writeToLog((logCounter++)+". Modified neighbor tree->"+neighborInTree.toString());
+                        writeToLog((logCounter++)+". Modified l2->"+l2.toString());
 
                         newInTree.put(v1, inTree.get(v1));
+                        writeToLog((logCounter++)+". Current new intree->"+newInTree.toString());
                         
                         c1++;
 
-                    } else {
+                    } else if (temp1 > temp2) {
                         // remove edge from intree and add in final tree
+                        writeToLog((logCounter++)+". temp1>temp2");
                         if (inTree.containsKey(v2)) inTree.remove(v2);
                         if (l1.contains(v2)) l1.remove(Integer.valueOf(v2));
+                        writeToLog((logCounter++)+". Modified in tree->"+inTree.toString());
+                        writeToLog((logCounter++)+". Modified l1->"+l2.toString());
                         
                         newInTree.put(v2, neighborInTree.get(v2));
+                        writeToLog((logCounter++)+". Current new intree->"+newInTree.toString());
 
                         c2++;
                     }
                 }
+
             }
 
             // if all n hop nodes are processed of neighbor tree
             while (c1 < l1.size()) {
+                writeToLog((logCounter++)+". All hops processed of neighbor tree");
                 int v1 = l1.get(c1);
+                writeToLog((logCounter++)+". Values: v1="+v1);
 
                 if (neighborInTree.containsKey(v1)) neighborInTree.remove(v1);
                 if (l2.contains(v1)) l2.remove(Integer.valueOf(v1));
+                writeToLog((logCounter++)+". Modified neighbor tree->"+neighborInTree.toString());
+                writeToLog((logCounter++)+". Modified l2->"+l2.toString());
 
                 newInTree.put(v1, inTree.get(v1));
+                writeToLog((logCounter++)+". Current new intree->"+newInTree.toString());
 
                 c1++;
             }
 
             // if all n hop nodes are processed of intree
             while (c2 < l2.size()) {
+                writeToLog((logCounter++)+". All hops processed of neighbor tree");
                 int v2 = l2.get(c2);
+                writeToLog((logCounter++)+". Values: v2="+v2);
 
                 if (inTree.containsKey(v2)) inTree.remove(v2);
                 if (l1.contains(v2)) l1.remove(Integer.valueOf(v2));
+                writeToLog((logCounter++)+". Modified in tree->"+inTree.toString());
+                writeToLog((logCounter++)+". Modified l1->"+l2.toString());
 
                 newInTree.put(v2, neighborInTree.get(v2));
+                writeToLog((logCounter++)+". Current new intree->"+newInTree.toString());
 
                 c2++;
             }
@@ -277,19 +342,25 @@ public class Node {
             // recompute the reversed intree to compute hops
             revInTree = new HashMap<>();
             revNeighborInTree = new HashMap<>();
+            writeToLog((logCounter++)+". Recomputed reversed intrees");
 
             buildRevInTree(revInTree, inTree);
             buildRevInTree(revNeighborInTree, neighborInTree);
+            writeToLog((logCounter++)+". Reversed intree->"+revInTree.toString());
+            writeToLog((logCounter++)+". Reversed neighbor intree->"+revNeighborInTree.toString());
 
             hopCnt++;
         }
+        writeToLog((logCounter++)+". End while");
 
         inTree = newInTree;
 
         revInTree = new HashMap<>();
-        buildRevInTree(revInTree, neighborInTree);
+        buildRevInTree(revInTree, inTree);
 
-        System.out.println("Intree for " + getName() + inTree.toString());
+        writeToLog((logCounter++)+". Final InTree->"+inTree.toString());
+        writeToLog((logCounter++)+". Final Reversed Intree->"+revInTree.toString());
+        writeToLog("");
 
         return;
     }
