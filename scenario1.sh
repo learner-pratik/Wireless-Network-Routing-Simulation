@@ -1,4 +1,4 @@
-rm inputs/* outputs/* logs/* &
+rm inputs/* outputs/* logs/* data/* &
 java Controller 200 &
 java Node 0 200 -1 &
 java Node 1 200 -1 &
