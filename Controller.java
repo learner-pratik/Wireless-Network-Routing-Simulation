@@ -11,6 +11,7 @@ import java.util.HashMap;
 public class Controller {
 
     private static final String ipDirectory = "inputs/", opDirectory = "outputs/";
+
     private int duration;
     private File topologyFile;
     private HashMap<Integer, ArrayList<Integer>> topology;
@@ -22,6 +23,7 @@ public class Controller {
         topology = new HashMap<Integer, ArrayList<Integer>>(10);
     }
 
+    // main method which builds the topology of the network
     private void buildTopology() {
         try {
             BufferedReader tReader = new BufferedReader(new FileReader(topologyFile));
@@ -51,6 +53,7 @@ public class Controller {
         }
     }
 
+    // class for files of each node
     class NodeFile {
         File file;
         int fileNo;
@@ -62,6 +65,7 @@ public class Controller {
             lastLine = 0;
         }
 
+        // method which read output file and writes to input file
         void readAndProcess() {
             try {    
                 if (lastLine < file.length()) {
@@ -109,9 +113,11 @@ public class Controller {
 
             for (int id = 0; id < 10; id++) {
                 
+                // check if node files exists, that means the node is running
                 String outputPath = opDirectory+"output_"+id+".txt";
                 if (new File(outputPath).exists()) {
                     
+                    // create file pointers to node files
                     if (nodeFiles[id] == null) {
                         File opFile = new File(outputPath);
                         nodeFiles[id] = new NodeFile(id, opFile);

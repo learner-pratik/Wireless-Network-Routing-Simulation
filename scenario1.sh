@@ -1,7 +1,7 @@
-rm inputs/* outputs/* logs/* data/* &
-java Controller 200 &
-java Node 0 200 -1 &
-java Node 1 200 -1 &
-java Node 2 200 -1 &
-java Node 3 200 -1 &
-java Node 4 200 -1
+rm inputs/* outputs/* data/* &
+java Controller 100 &
+java Node 0 100 -1 &
+java Node 1 100 -1 &
+java Node 2 100 -1 &
+java Node 3 100 -1 &
+java Node 4 100 -1

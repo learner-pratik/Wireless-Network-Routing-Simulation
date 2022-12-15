@@ -1,9 +1,0 @@
-message from 0: data 0 (2) begin message_from_0_to_2
-message from 0: data 0 (2) begin message_from_0_to_2
-message from 1: data 1 (2) begin null
-message from 0: data 0 (2) begin message_from_0_to_2
-message from 1: data 1 (2) begin null
-message from 0: data 0 (2) begin message_from_0_to_2
-message from 1: data 1 (2) begin null
-message from 0: data 0 (2) begin message_from_0_to_2
-message from 1: data 1 (2) begin null
